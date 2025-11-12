@@ -104,13 +104,10 @@ try:
             frame = cv2.flip(frame, 1)
             frame = imutils.resize(frame, width=cam_w, height=cam_h)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            # Use convertScaleAbs for safe conversion to the 8-bit (uint8)
-            # format that dlib requires for its detector.
-            gray = cv2.convertScaleAbs(gray)
+            print(f"DEBUG: gray.dtype={gray.dtype}, gray.shape={gray.shape}")
 
             # --- 3c. Face and Landmark Detection ---
-            rects = detector(gray, 0)
+            rects = detector(frame, 0)
 
             # If no face is detected, skip gesture processing
             if len(rects) == 0:
