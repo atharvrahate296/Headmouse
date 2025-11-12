@@ -1,6 +1,6 @@
 # virtual-mouse-using-nose-and-eye-movement
 
-install Miniconda to download complex C packages like dlib from drive link : (https://drive.google.com/file/d/1kT2CeuDSm7HL4M9swc4pMuRHg-AyMGU9/view?usp=drive_link)[miniconda] 
+install Miniconda to download complex C packages like dlib from drive link : [miniconda](https://drive.google.com/file/d/1kT2CeuDSm7HL4M9swc4pMuRHg-AyMGU9/view?usp=drive_link) 
 Open the .exe file you just downloaded.
 
 Click "Next" on the welcome screen.
