@@ -1,5 +1,45 @@
 # virtual-mouse-using-nose-and-eye-movement
 
+install Miniconda to download complex C packages like dlib from drive link : (miniconda)[https://drive.google.com/file/d/1kT2CeuDSm7HL4M9swc4pMuRHg-AyMGU9/view?usp=drive_link] 
+Open the .exe file you just downloaded.
+
+Click "Next" on the welcome screen.
+
+Agree to the license agreement.
+
+For "Install for:", choose "Just Me" (this is the recommended and easiest option).
+
+Choose a destination folder (the default is usually fine).
+
+Advanced Options: This is important.
+
+Do NOT check "Add Miniconda3 to my PATH environment variable." (This can conflict with other Python installs).
+
+DO check "Register Miniconda3 as my default Python 3.10" (or whichever version it shows).
+
+Click "Install" and let it finish.
+
+### After installation run following command on anaconda prompt : 
+
+#### Create a New conda Environment: This creates a clean, isolated space for your project. Let's call it headmouse-env.
+
+> conda create -n headmouse-env python=3.10
+
+It will ask you to proceed (y/n). Type y and press Enter.
+
+#### Activate Your New Environment:
+
+> conda activate headmouse-env
+
+#### Install dlib (The Easy Way): Install it from the "conda-forge" channel, which has pre-built versions.
+
+> conda install -c conda-forge dlib=19.24.0
+
+after these steps continue with downloading packages from your requirements.txt file on your code terminal :
+
+> pip install -r requirements.txt 
+
+
 This HCI (Human-Computer Interaction) application in Python(3.6) will allow you to control your mouse cursor with your facial movements, works with just your regular webcam. Its hands-free, no wearable hardware or sensors needed.
 
 The list of actions include:
