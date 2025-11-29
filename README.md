@@ -86,7 +86,7 @@ python mouse-cursor-control.py
 Please raise an issue in case of any errors.
 
 #Usage
-![githubmyproject](https://github.com/g-priyanshu/virtual-mouse-using-nose-and-eye-movement/assets/134190092/d8bc8ec8-a4e5-44af-8aaf-be53d1fdaf2a)
+
 
 #How it works
 
