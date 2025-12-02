@@ -1,6 +1,7 @@
+# headmouse.py
 import sys 
 
-# --- 1. Handle Library Imports ---
+#  1. Handle Library Imports 
 try:
     from imutils import face_utils
     from utils import * 
@@ -10,13 +11,13 @@ try:
     import dlib
     import cv2
 except ImportError as e:
-    print(f"--- FATAL ERROR: Missing Required Library ---")
+    print(f" FATAL ERROR: Missing Required Library ")
     print(f"Details: {e}")
     print("One or more required libraries (dlib, opencv, imutils, pyautogui) are not installed.")
     print("Please install them, for example: 'pip install opencv-python dlib imutils pyautogui'")
     sys.exit(1)
 
-# --- Constants and Thresholds ---
+#  Constants and Thresholds 
 MOUTH_AR_THRESH = 0.6
 MOUTH_AR_CONSECUTIVE_FRAMES = 15
 EYE_AR_THRESH = 0.22
@@ -25,7 +26,7 @@ WINK_AR_DIFF_THRESH = 0.04
 WINK_AR_CLOSE_THRESH = 0.19
 WINK_CONSECUTIVE_FRAMES = 10
 
-# --- State Counters and Flags ---
+#  State Counters and Flags 
 MOUTH_COUNTER = 0
 EYE_COUNTER = 0
 WINK_COUNTER = 0
@@ -36,7 +37,7 @@ RIGHT_WINK = False
 SCROLL_MODE = False
 ANCHOR_POINT = (0, 0)
 
-# --- Colors for Drawing ---
+#  Colors for Drawing 
 WHITE_COLOR = (255, 255, 255)
 YELLOW_COLOR = (0, 255, 255)
 RED_COLOR = (0, 0, 255)
@@ -44,13 +45,13 @@ GREEN_COLOR = (0, 255, 0)
 BLUE_COLOR = (255, 0, 0)
 BLACK_COLOR = (0, 0, 0)
 
-# --- Facial Landmark Indices ---
+#  Facial Landmark Indices 
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
 (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 (nStart, nEnd) = face_utils.FACIAL_LANDMARKS_IDXS["nose"]
 (mStart, mEnd) = face_utils.FACIAL_LANDMARKS_IDXS["mouth"]
 
-# --- 2. Initialize Models and Camera ---
+#  2. Initialize Models and Camera 
 try:
     print("Loading dlib face detector...")
     shape_predictor_path = "model/shape_predictor_68_face_landmarks.dat"
@@ -65,16 +66,16 @@ try:
         raise IOError("Error: Could not open video camera (index 0). Is it being used by another application?")
 
 except FileNotFoundError:
-    print(f"--- FATAL ERROR: Model File Not Found ---")
+    print(f" FATAL ERROR: Model File Not Found ")
     print(f"Could not find '{shape_predictor_path}'.")
     print("Please download 'shape_predictor_68_face_landmarks.dat' and place it in a 'model' folder.")
     sys.exit(1)
 except (IOError, RuntimeError) as e:
-    print(f"--- FATAL ERROR: Initialization Failed ---")
+    print(f" FATAL ERROR: Initialization Failed ")
     print(f"Details: {e}")
     sys.exit(1)
 except Exception as e:
-    print(f"--- FATAL ERROR: An unexpected error occurred on startup ---")
+    print(f" FATAL ERROR: An unexpected error occurred on startup ")
     print(f"Details: {e}")
     sys.exit(1)
 
@@ -82,12 +83,11 @@ print("Initialization successful. Starting main loop...")
 cam_w = 640
 cam_h = 480
 
-# --- 3. Main Application Loop ---
+# Main Application Loop 
 try:
     while True:
-        # --- 3a. Per-Frame Processing and Error Skipping ---
-        # This inner try/except skips a single bad frame
-        # without crashing the whole application.
+        #  Per-Frame Processing and Error Skipping 
+        # Inner try/except skips a single bad frame without crashing the whole application.
         try:
             _, frame = vid.read()
             
@@ -100,13 +100,13 @@ try:
                     break
                 continue
             
-            # --- 3b. Image Pre-processing ---
+            #  Image Pre-processing 
             frame = cv2.flip(frame, 1)
             frame = imutils.resize(frame, width=cam_w, height=cam_h)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             print(f"DEBUG: gray.dtype={gray.dtype}, gray.shape={gray.shape}")
 
-            # --- 3c. Face and Landmark Detection ---
+            # Face and Landmark Detection 
             rects = detector(frame, 0)
 
             # If no face is detected, skip gesture processing
@@ -127,7 +127,7 @@ try:
             rightEye = shape[rStart:rEnd]
             nose = shape[nStart:nEnd]
 
-            # --- 3d. Calculate Aspect Ratios ---
+            #  3d. Calculate Aspect Ratios 
             try:
                 mar = mouth_aspect_ratio(mouth)
                 leftEAR = eye_aspect_ratio(leftEye)
@@ -140,7 +140,7 @@ try:
 
             nose_point = (nose[3, 0], nose[3, 1])
 
-            # --- 3e. Draw Facial Overlays ---
+            #  3e. Draw Facial Overlays 
             mouthHull = cv2.convexHull(mouth)
             leftEyeHull = cv2.convexHull(leftEye)
             rightEyeHull = cv2.convexHull(rightEye)
@@ -148,7 +148,7 @@ try:
             cv2.drawContours(frame, [leftEyeHull], -1, YELLOW_COLOR, 1)
             cv2.drawContours(frame, [rightEyeHull], -1, YELLOW_COLOR, 1)
 
-            # --- 3f. Gesture Detection Logic ---
+            #  3f. Gesture Detection Logic 
             
             # (Wink detection for left/right clicks)
             if diff_ear > WINK_AR_DIFF_THRESH:
@@ -191,7 +191,7 @@ try:
             else:
                 MOUTH_COUNTER = 0
 
-            # --- 3g. Mouse Control Logic ---
+            #  3g. Mouse Control Logic 
             if INPUT_MODE:
                 cv2.putText(frame, "READING INPUT!", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, RED_COLOR, 2)
                 x, y = ANCHOR_POINT
@@ -223,7 +223,7 @@ try:
             if SCROLL_MODE:
                 cv2.putText(frame, 'SCROLL MODE IS ON!', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, RED_COLOR, 2)
 
-            # --- 3h. Display Frame and Handle Exit ---
+            #  3h. Display Frame and Handle Exit 
             cv2.imshow("Frame", frame)
             key = cv2.waitKey(1) & 0xFF
 
@@ -238,16 +238,16 @@ try:
             print(f"Warning: Unexpected error processing a frame: {e}. Skipping.")
             continue
 
-# --- Handle High-Level Program Stops ---
+#  Handle Program Stops 
 except pag.FailSafeException:
-    print("\n--- SAFETY STOP ---")
+    print("\n SAFETY STOP ")
     print("PyAutoGUI fail-safe triggered (mouse moved to a corner).")
     print("Program has been stopped to prevent runaway mouse.")
 except KeyboardInterrupt:
-    print("\n--- User Stop ---")
+    print("\n User Stop ")
     print("Program stopped by user (Ctrl+C).")
 
-# --- 4. Cleanup ---
+#  4. Cleanup 
 finally:
     print("\nCleaning up resources...")
     vid.release()
