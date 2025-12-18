@@ -52,7 +52,7 @@ class Config:
     use_relative_movement: bool = True  # Toggle between relative/absolute
     nose_dead_zone_radius: float = 0.003  # No movement within this radius (normalized)
     nose_control_radius: float = 0.04 # Maximum detection radius (normalized)
-    nose_speed_multiplier: float = 120.0  # Cursor pixels per second per unit displacement
+    nose_speed_multiplier: float = 300.0  # Cursor pixels per second per unit displacement
     nose_speed_curve: str = "exponential"  # "linear", "exponential", "squared"
     nose_max_speed: float = 3000000.0  # Maximum cursor speed (pixels per second)
     nose_center_smoothing: float = 0.3  # Smoothing for center position updates (0-1)
@@ -76,6 +76,12 @@ class Config:
     show_nose_circle: bool = True  # NEW: Show nose control circle
     show_stats: bool = True
     show_debug_values: bool = False
+
+    pip_width: int = 320
+    pip_height: int = 240
+    pip_x: int = 1580  # Bottom-right positioning like hand_mouse
+    pip_y: int = 780
+    pip_alpha: float = 0.5 
     
     def save(self, path: str = "mouse_config.json"):
         """Save configuration to file"""
@@ -897,7 +903,7 @@ class VirtualMouse:
     # This adds PIP at top-left by default and consistent ESC handling
 
     def run(self):
-        """Main application loop with PIP mode support"""
+        """Main application loop with enhanced PIP mode support"""
         cap = cv2.VideoCapture(0)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.config.cam_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.config.cam_height)
@@ -907,7 +913,7 @@ class VirtualMouse:
             return
         
         print("\n" + "="*70)
-        print("MOUTH-CONTROLLED VIRTUAL MOUSE")
+        print("MOUTH-CONTROLLED VIRTUAL MOUSE - PIP MODE")
         print("="*70)
         if self.config.use_relative_movement:
             print("🎯 MODE: RELATIVE (Nose velocity-based)")
@@ -924,58 +930,42 @@ class VirtualMouse:
         print()
         print("⌨️  Keyboard shortcuts:")
         print("   ESC/Q - Exit program")
-        print("   P     - Toggle PIP mode (Picture-in-Picture)")
         print("   R     - Toggle between Relative/Absolute mode")
         print("   D     - Toggle debug values")
         print("   M     - Toggle face mesh")
         print("   N     - Toggle nose circle (relative mode)")
         print("="*70 + "\n")
         
-        # PIP mode - START WITH PIP ON by default at top-left
+        # PIP mode setup - START WITH PIP ON (like hand_mouse)
         pip_mode = True
         pip_window = None
         pip_label = None
+        root = None
         
-        def close_window(event=None):
-            nonlocal running
-            running = False
-        
-        def toggle_pip():
-            nonlocal pip_mode, pip_window, pip_label
-            pip_mode = not pip_mode
+        try:
+            # Create Tkinter root (hidden)
+            root = tk.Tk()
+            root.withdraw()
             
-            if pip_mode:
-                # Create PIP window using Tkinter at TOP-LEFT
-                pip_window = tk.Tk()
-                pip_window.title("Head Mouse - PIP")
-                pip_window.geometry("320x240+10+10")  # Top-left corner
-                pip_window.attributes('-topmost', True)  # Always on top
-                pip_window.attributes('-alpha', 0.4)  # 40% transparency
-                pip_window.resizable(False, False)
-                
-                # Remove window decorations for cleaner look
-                pip_window.overrideredirect(True)
-                
-                pip_label = tk.Label(pip_window)
-                pip_label.pack()
-                
-                # Bind ESC and Q to close
-                pip_window.bind('<Escape>', close_window)
-                pip_window.bind('q', close_window)
-                pip_window.bind('Q', close_window)
-                pip_window.bind('p', lambda e: toggle_pip())
-                pip_window.bind('P', lambda e: toggle_pip())
-                
-                print("🖼️  PIP mode: ON (top-left corner)")
-            else:
-                if pip_window:
-                    pip_window.destroy()
-                    pip_window = None
-                    pip_label = None
-                print("🖼️  PIP mode: OFF")
-        
-        # Initialize PIP window on startup
-        toggle_pip()
+            # Create PIP window as Toplevel
+            pip_window = tk.Toplevel(root)
+            pip_window.title("Head Mouse")
+            pip_window.geometry(f"{self.config.pip_width}x{self.config.pip_height}+"
+                            f"{self.config.pip_x}+{self.config.pip_y}")
+            pip_window.attributes('-topmost', True)
+            pip_window.attributes('-alpha', self.config.pip_alpha)
+            pip_window.resizable(False, False)
+            pip_window.overrideredirect(True)  # Remove window decorations
+            
+            pip_label = tk.Label(pip_window)
+            pip_label.pack()
+            
+            print(f"🖼️ Running in PIP mode (bottom-right corner)")
+            
+        except Exception as e:
+            print(f"⚠️ Could not create PIP window: {e}")
+            print("   Falling back to OpenCV window")
+            pip_mode = False
         
         with self.mp_face_mesh.FaceMesh(
             max_num_faces=1,
@@ -1022,7 +1012,7 @@ class VirtualMouse:
                             if self.is_moving:
                                 moved = self.nose_controller.move_cursor(landmarks)
                                 if not was_moving:
-                                    print("🖱️  Relative movement: ACTIVE")
+                                    print("🖱️ Relative movement: ACTIVE")
                             else:
                                 self.nose_controller.update_reference_position(landmarks)
                                 if was_moving:
@@ -1036,7 +1026,7 @@ class VirtualMouse:
                                 self.last_cursor_pos = (cursor_x, cursor_y)
                                 if not was_moving:
                                     self.cursor_filter.reset()
-                                    print("🖱️  Cursor movement: ACTIVE")
+                                    print("🖱️ Cursor movement: ACTIVE")
                             else:
                                 if was_moving:
                                     print("🔒 Cursor locked at position")
@@ -1052,7 +1042,7 @@ class VirtualMouse:
                             if wink:
                                 button = 'left' if wink == 'left' else 'right'
                                 pag.click(button=button)
-                                print(f"🖱️  {button.capitalize()} click")
+                                print(f"🖱️ {button.capitalize()} click")
                         
                         # Draw visualizations
                         self.draw_visualizations(frame, face_landmarks, 
@@ -1071,39 +1061,43 @@ class VirtualMouse:
                             self.frame_count = 0
                             self.fps_start_time = time.time()
                     
-                    # Handle PIP mode
+                    # Handle PIP mode display
                     if pip_mode and pip_window and pip_label:
-                        # Resize frame for PIP
-                        pip_frame = cv2.resize(frame, (320, 240))
-                        pip_frame_rgb = cv2.cvtColor(pip_frame, cv2.COLOR_BGR2RGB)
-                        
-                        # Convert to PIL Image then to PhotoImage
-                        pil_image = Image.fromarray(pip_frame_rgb)
-                        photo = ImageTk.PhotoImage(image=pil_image)
-                        
-                        # Update PIP window
-                        pip_label.config(image=photo)
-                        pip_label.image = photo  # Keep reference
-                        
                         try:
+                            # Resize frame for PIP
+                            pip_frame = cv2.resize(frame, (self.config.pip_width, 
+                                                        self.config.pip_height))
+                            pip_frame_rgb = cv2.cvtColor(pip_frame, cv2.COLOR_BGR2RGB)
+                            
+                            # Convert to PIL Image then to PhotoImage
+                            pil_image = Image.fromarray(pip_frame_rgb)
+                            photo = ImageTk.PhotoImage(image=pil_image, master=pip_window)
+                            
+                            # Update PIP window
+                            pip_label.config(image=photo)
+                            pip_label.image = photo  # Keep reference
+                            
+                            pip_window.update_idletasks()
                             pip_window.update()
                         except tk.TclError:
-                            # Window was closed
-                            pip_mode = False
-                            pip_window = None
-                            pip_label = None
+                            # PIP window was closed
+                            print("🖼️ PIP window closed")
+                            running = False
+                            break
+                        except Exception as e:
+                            print(f"⚠️ PIP update error: {e}")
+                            # Continue running even if PIP fails
+                            pass
                     else:
-                        # Display main OpenCV window
+                        # Fallback to OpenCV window
                         cv2.imshow('Mouth-Controlled Virtual Mouse', frame)
                     
-                    # Handle keyboard input
+                    # Handle keyboard input (check for ESC in OpenCV window)
                     key = cv2.waitKey(1) & 0xFF
                     
                     if key == 27 or key == ord('q') or key == ord('Q'):  # ESC or Q
                         print("\n👋 Exiting...")
                         break
-                    elif key == ord('p') or key == ord('P'):
-                        toggle_pip()
                     elif key == ord('r') or key == ord('R'):
                         self.config.use_relative_movement = not self.config.use_relative_movement
                         if self.config.use_relative_movement:
@@ -1130,7 +1124,7 @@ class VirtualMouse:
                         print(f"Nose circle: {'ON' if self.config.show_nose_circle else 'OFF'}")
             
             except KeyboardInterrupt:
-                print("\n⚠️  Interrupted by user")
+                print("\n⚠️ Interrupted by user")
             except pag.FailSafeException:
                 print("\n🛑 PyAutoGUI failsafe triggered (mouse in corner)")
             except Exception as e:
@@ -1140,11 +1134,20 @@ class VirtualMouse:
             finally:
                 cap.release()
                 cv2.destroyAllWindows()
+                
+                # Clean up PIP window
                 if pip_window:
                     try:
                         pip_window.destroy()
                     except:
                         pass
+                
+                if root:
+                    try:
+                        root.destroy()
+                    except:
+                        pass
+                
                 print("✓ Cleanup complete")
 
 def headmouse():
