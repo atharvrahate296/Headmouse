@@ -36,10 +36,10 @@ class VirtualMouseGUI:
         self.root.resizable(False, False)
         
         # Set color scheme
-        self.bg_primary = "#1a1a2e"
-        self.bg_secondary = "#16213e"
+        self.bg_primary = "#252528"
+        self.bg_secondary = "#2b2b30"
         self.accent_color = "#0f3460"
-        self.highlight_color = "#e94560"
+        self.highlight_color = "#bb6d7a"
         self.button_color = "#5be480"
         self.text_color = "#eaeaea"
         self.info_color = "#3b82f6"
