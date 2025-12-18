@@ -1,8 +1,8 @@
 {
-  "eye_closure_thresh": 0.265,
-  "blink_consecutive_frames": 2,
-  "wink_ar_diff_thresh": 0.045,
-  "wink_consecutive_frames": 6,
+  "eye_closure_thresh": 0.280,
+  "blink_consecutive_frames": 3,
+  "wink_ar_diff_thresh": 0.065,
+  "wink_consecutive_frames": 5,
   "mouth_open_thresh": 0.5,
   "mouth_consecutive_frames": 2,
   "cursor_smoothing": 5,
@@ -15,23 +15,11 @@
   "show_eye_markers": true,
   "show_mouth_markers": true,
   "show_stats": true,
-  "show_debug_values": false,
-  "calibration_date": "2025-11-30T14:49:11",
-  "calibration_version": "1.0",
-  "eye_open_range": [
-    0.22,
-    0.244
-  ],
-  "eye_closed_range": [
-    0.3,
-    0.394
-  ],
-  "mouth_closed_range": [
-    0.033,
-    0.044
-  ],
-  "mouth_open_range": [
-    0.054,
-    0.092
-  ]
+  "show_debug_values": true,
+  "calibration_date": "2025-12-13T20:45:00",
+  "calibration_version": "1.2",
+  "eye_open_range": [0.22, 0.244],
+  "eye_closed_range": [0.3, 0.394],
+  "mouth_closed_range": [0.033, 0.044],
+  "mouth_open_range": [0.054, 0.092]
 }

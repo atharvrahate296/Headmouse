@@ -336,16 +336,21 @@ class EnhancedGestureDetector:
             left_closure = np.mean(self.left_closure_history)
             right_closure = np.mean(self.right_closure_history)
         
-        # Both eyes should be closed for a blink
+        # BOTH eyes must be closed AND relatively equal (not a wink)
         avg_closure = (left_closure + right_closure) / 2.0
+        closure_symmetry = abs(left_closure - right_closure)
         
-        if avg_closure > self.config.eye_closure_thresh:
+        # For blink: both eyes closed AND symmetric (difference < 0.06)
+        is_blink_state = (avg_closure > self.config.eye_closure_thresh and 
+                         closure_symmetry < 0.06)
+        
+        if is_blink_state:
             self.blink_counter += 1
         else:
             if self.blink_counter >= self.config.blink_consecutive_frames:
                 # Debounce - prevent multiple detections
                 current_time = time.time()
-                if current_time - self.last_blink_time > 0.4:
+                if current_time - self.last_blink_time > 0.5:
                     self.blink_counter = 0
                     self.last_blink_time = current_time
                     return True
@@ -547,7 +552,7 @@ class VirtualMouse:
                            f"Eye L: {eye_debug_values['left_closure']:.3f} | "
                            f"R: {eye_debug_values['right_closure']:.3f}", 
                            (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 
-                           (255, 255, 0), 1)
+                           (0, 0, 255), 1)
                 y_offset += 25
                 
                 # Mouth debug
@@ -555,7 +560,7 @@ class VirtualMouse:
                            f"Mouth: {mouth_debug_values['mouth_ratio']:.3f} | "
                            f"Thresh: {mouth_debug_values['threshold']:.3f}", 
                            (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 
-                           (0, 255, 255), 1)
+                           (0, 0, 255), 1)
                 y_offset += 25
         
         # Instructions
@@ -659,14 +664,14 @@ class VirtualMouse:
                             if self.gesture_detector.detect_blink(landmarks):
                                 self.scroll_mode = not self.scroll_mode
                                 print(f"{'✓' if self.scroll_mode else '✗'} Scroll mode: "
-                                      f"{'ON' if self.scroll_mode else 'OFF'}")
+                                      f"{'ON' if self.scroll_mode else 'OFF'}",f"L: {eye_debug_values['left_closure']:.3f},  R: {eye_debug_values['right_closure']:.3f}")
                             
                             # 2. Wink - click
                             wink = self.gesture_detector.detect_wink(landmarks)
                             if wink:
                                 button = 'left' if wink == 'left' else 'right'
                                 pag.click(button=button)
-                                print(f"🖱️  {button.capitalize()} click")
+                                print(f"🖱️  {button.capitalize()} click", f"L: {eye_debug_values['left_closure']:.3f},  R: {eye_debug_values['right_closure']:.3f}")
                         
                         # Draw visualizations
                         self.draw_visualizations(frame, face_landmarks, 
