@@ -1113,6 +1113,15 @@ class VirtualMouse:
                 cv2.destroyAllWindows()
                 print("✓ Cleanup complete")
 
+def headmouse():
+    try:
+        mouse = VirtualMouse()
+        frame = mouse.run()
+    except Exception as e:
+        print(f"\n❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 def main():
     """Entry point"""
