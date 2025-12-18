@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GestureMouse - AI-Powered Hand Gesture Control</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        accent: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#ff6b35',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            800: '#9a3412',
+                            900: '#7c2d12',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #0ea5e9 0%, #ff6b35 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-white text-slate-800 antialiased">
+
+    <!-- Navigation -->
+    <nav class="w-full py-4 px-6 lg:px-16 flex justify-between items-center fixed top-0 bg-white/95 backdrop-blur-lg z-50 border-b border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-hand-pointer text-white text-lg"></i>
+            </div>
+            <span class="font-bold text-2xl tracking-tight">
+                <span class="text-slate-900">Gesture</span><span class="text-primary-500">Mouse</span>
+            </span>
+        </div>
+        
+        <div class="hidden md:flex gap-10 font-medium text-[15px]">
+            <a href="#features" class="text-slate-600 hover:text-primary-500 transition-colors">Features</a>
+            <a href="#how-it-works" class="text-slate-600 hover:text-primary-500 transition-colors">How It Works</a>
+            <a href="#requirements" class="text-slate-600 hover:text-primary-500 transition-colors">Requirements</a>
+        </div>
+        
+        <a href="https://github.com/Krushnansh22/Virual-Mouse-By-Hand-Tracking-Using-Mediapipe" target="_blank" 
+           class="bg-primary-500 hover:bg-primary-600 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 text-[15px]">
+            <i class="fa-brands fa-github mr-2"></i>View on GitHub
+        </a>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="pt-32 pb-24 px-6 lg:px-16 bg-gradient-to-br from-slate-50 via-primary-50 to-accent-50 relative overflow-hidden">
+        <!-- Background Decoration -->
+        <div class="absolute inset-0 overflow-hidden opacity-[0.03]">
+            <div class="absolute top-1/4 -left-20 w-96 h-96 bg-primary-500 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent-500 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto relative z-10">
+            <!-- Badge -->
+            <div class="text-center mb-8">
+                <span class="inline-flex items-center gap-2 bg-white border border-primary-200 rounded-full px-5 py-2.5 text-sm font-medium text-primary-700 shadow-sm">
+                    <i class="fa-brands fa-python text-primary-500"></i>
+                    Built with Python & MediaPipe
+                </span>
+            </div>
+
+            <!-- Main Headline -->
+            <h1 class="text-5xl lg:text-7xl font-extrabold text-center mb-8 leading-tight">
+                Control Your PC with<br/>
+                <span class="gradient-text">Hand Gestures</span>
+            </h1>
+
+            <!-- Subtitle -->
+            <p class="text-xl lg:text-2xl text-center text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+                AI-powered virtual mouse built in <span class="font-semibold text-slate-900">pure Python</span>. 
+                No cloud, no tracking. Your gestures stay on your machine.
+            </p>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+                <a href="https://github.com/Krushnansh22/Virual-Mouse-By-Hand-Tracking-Using-Mediapipe" target="_blank" 
+                   class="bg-accent-500 hover:bg-accent-600 text-white text-lg font-bold py-4 px-10 rounded-xl shadow-2xl shadow-accent-500/40 hover:shadow-accent-500/60 transition-all transform hover:-translate-y-1 flex items-center gap-3">
+                    <i class="fa-solid fa-download"></i>
+                    Download Source Code
+                </a>
+                <a href="#how-it-works" 
+                   class="bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-200 text-lg font-semibold py-4 px-10 rounded-xl transition-all flex items-center gap-3">
+                    <i class="fa-solid fa-play-circle text-primary-500"></i>
+                    See How It Works
+                </a>
+            </div>
+
+            <!-- Tech Stack Tags -->
+            <div class="flex flex-wrap justify-center gap-3 mb-16">
+                <span class="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-700">Python 3.8+</span>
+                <span class="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-700">MediaPipe</span>
+                <span class="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-700">OpenCV</span>
+                <span class="bg-white border border-slate-200 px-4 py-2 rounded-lg text-sm font-medium text-slate-700">PyAutoGUI</span>
+            </div>
+
+            <!-- Hero Image/Demo -->
+            <div class="max-w-5xl mx-auto">
+                <div class="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-900 transform hover:scale-[1.02] transition-transform duration-500">
+                    <div class="bg-slate-800 px-5 py-3 flex items-center gap-2 border-b border-slate-700">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-3 text-xs text-slate-400 font-mono">gesture_mouse_detection.py</span>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-20 text-center">
+                        <div class="inline-block p-8 bg-slate-700/30 rounded-2xl backdrop-blur-sm">
+                            <i class="fa-solid fa-hand-pointer text-8xl text-primary-400 mb-4"></i>
+                            <p class="text-slate-300 text-lg font-medium">Real-time Hand Tracking Dashboard</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 px-6 lg:px-16 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
+                    Why Choose <span class="gradient-text">GestureMouse</span>?
+                </h2>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto">
+                    Experience touchless computer control with cutting-edge AI hand tracking technology
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature 1 -->
+                <div class="group p-8 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 hover:border-primary-300 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-primary-500/30">
+                        <i class="fa-solid fa-mouse-pointer text-3xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-slate-900">Precise Cursor Control</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Move your index finger to control cursor position with pixel-perfect accuracy in real-time
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="group p-8 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 hover:border-primary-300 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-br from-accent-500 to-accent-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-accent-500/30">
+                        <i class="fa-solid fa-hand-pointer text-3xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-slate-900">Intuitive Gestures</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Perform left/right clicks, scrolling, and more with simple, natural hand movements
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="group p-8 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 hover:border-primary-300 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-primary-500/30">
+                        <i class="fa-solid fa-volume-high text-3xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-slate-900">Volume Control</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        Adjust system volume seamlessly using vertical hand gestures - no keyboard needed
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="group p-8 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-100 hover:border-primary-300 hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300">
+                    <div class="w-16 h-16 bg-gradient-to-br from-accent-500 to-accent-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-accent-500/30">
+                        <i class="fa-solid fa-bolt text-3xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-slate-900">Real-time Tracking</h3>
+                    <p class="text-slate-600 leading-relaxed">
+                        MediaPipe's 21-point hand landmark detection at 60 FPS with minimal latency
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-24 px-6 lg:px-16 bg-gradient-to-br from-slate-50 to-primary-50">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <!-- Left: Visual -->
+                <div class="order-2 lg:order-1">
+                    <div class="relative">
+                        <div class="absolute -inset-4 bg-gradient-to-r from-primary-500 to-accent-500 rounded-3xl blur-2xl opacity-20"></div>
+                        <div class="relative bg-white rounded-2xl shadow-2xl border border-slate-200 p-12 text-center">
+                            <div class="inline-block p-10 bg-gradient-to-br from-primary-50 to-accent-50 rounded-3xl">
+                                <i class="fa-solid fa-hand-scissors text-9xl text-primary-500"></i>
+                            </div>
+                            <p class="mt-6 text-lg font-semibold text-slate-700">AI Hand Detection Engine</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Content -->
+                <div class="order-1 lg:order-2">
+                    <span class="inline-block text-primary-600 font-bold text-sm tracking-widest uppercase mb-4 bg-primary-50 px-4 py-2 rounded-lg">
+                        Powered by AI
+                    </span>
+                    <h2 class="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
+                        Advanced Gesture Recognition
+                    </h2>
+                    <p class="text-lg text-slate-600 mb-6 leading-relaxed">
+                        This Python program utilizes <strong class="text-slate-900">MediaPipe</strong> and <strong class="text-slate-900">PyAutoGUI</strong> to create a hand gesture-controlled virtual mouse. By detecting 21 hand landmarks through your webcam, it translates movements into precise cursor control.
+                    </p>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        Say goodbye to traditional mouse devices. Experience intuitive, touchless computer interaction powered by machine learning.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <i class="fa-solid fa-bolt text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-900 mb-1">60 FPS Hand Tracking</h4>
+                                <p class="text-slate-600 text-sm">Real-time detection with zero lag</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <i class="fa-solid fa-shield-halved text-white text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-slate-900 mb-1">100% Privacy-First</h4>
+                                <p class="text-slate-600 text-sm">All processing happens locally - no cloud</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Requirements Section -->
+    <section id="requirements" class="py-24 px-6 lg:px-16 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
+                    Requirements & Setup
+                </h2>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto">
+                    Get started in minutes with these simple installation steps
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                <!-- Requirement 1 -->
+                <div class="group p-8 bg-gradient-to-br from-slate-50 to-white rounded-2xl border-2 border-slate-200 hover:border-primary-300 hover:shadow-xl transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                            <span class="text-white font-bold text-xl">1</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-slate-900 mb-3">Python</h3>
+                            <p class="text-slate-600 mb-4">Download and install Python from <a href="https://python.org" target="_blank" class="text-primary-500 hover:text-primary-600 font-medium">python.org</a></p>
+                            <span class="inline-block bg-accent-50 text-accent-700 px-3 py-1.5 rounded-lg text-sm font-semibold border border-accent-200">
+                                ⭐ Version 3.8+ Required
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requirement 2 -->
+                <div class="group p-8 bg-gradient-to-br from-slate-50 to-white rounded-2xl border-2 border-slate-200 hover:border-primary-300 hover:shadow-xl transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                            <span class="text-white font-bold text-xl">2</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-slate-900 mb-3">OpenCV</h3>
+                            <p class="text-slate-600 mb-4">Install the OpenCV library:</p>
+                            <code class="block bg-slate-900 text-primary-400 px-4 py-3 rounded-xl text-sm font-mono border-2 border-slate-700">pip install opencv-python</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requirement 3 -->
+                <div class="group p-8 bg-gradient-to-br from-slate-50 to-white rounded-2xl border-2 border-slate-200 hover:border-primary-300 hover:shadow-xl transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                            <span class="text-white font-bold text-xl">3</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-slate-900 mb-3">MediaPipe</h3>
+                            <p class="text-slate-600 mb-4">Install MediaPipe for hand tracking:</p>
+                            <code class="block bg-slate-900 text-primary-400 px-4 py-3 rounded-xl text-sm font-mono border-2 border-slate-700">pip install mediapipe</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Requirement 4 -->
+                <div class="group p-8 bg-gradient-to-br from-slate-50 to-white rounded-2xl border-2 border-slate-200 hover:border-primary-300 hover:shadow-xl transition-all">
+                    <div class="flex items-start gap-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                            <span class="text-white font-bold text-xl">4</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-slate-900 mb-3">PyAutoGUI</h3>
+                            <p class="text-slate-600 mb-4">Install PyAutoGUI for mouse control:</p>
+                            <code class="block bg-slate-900 text-primary-400 px-4 py-3 rounded-xl text-sm font-mono border-2 border-slate-700">pip install pyautogui</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Run Command -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-10 border-2 border-slate-700 shadow-2xl">
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-white mb-2">Ready to Run</h3>
+                    <p class="text-slate-400">Execute the program with this command:</p>
+                </div>
+                <div class="bg-slate-950 rounded-xl p-6 border-2 border-primary-500/30">
+                    <code class="text-primary-400 text-lg font-mono block text-center">python hand_gesture_mouse.py</code>
+                </div>
+                <p class="text-center text-slate-400 text-sm mt-6">
+                    💡 Ensure proper lighting and clear hand visibility for best results
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-24 px-6 lg:px-16 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 text-white relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+            <div class="absolute bottom-10 right-10 w-96 h-96 bg-accent-300 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="max-w-4xl mx-auto text-center relative z-10">
+            <h2 class="text-4xl lg:text-5xl font-bold mb-6">
+                Ready to Go Touchless?
+            </h2>
+            <p class="text-xl lg:text-2xl mb-10 text-primary-50 leading-relaxed">
+                Join the future of computer interaction. Download the source code and start controlling your PC with hand gestures today.
+            </p>
+
+            <a href="https://github.com/Krushnansh22/Virual-Mouse-By-Hand-Tracking-Using-Mediapipe" target="_blank" 
+               class="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-primary-600 text-xl font-bold py-5 px-12 rounded-xl shadow-2xl hover:shadow-white/50 transition-all transform hover:-translate-y-1">
+                <i class="fa-brands fa-github text-2xl"></i>
+                Download on GitHub
+            </a>
+            <p class="mt-6 text-primary-100 text-sm">Open Source • Python 3.8+ • Free Forever</p>
+
+            <!-- Contribution Box -->
+            <div class="mt-16 bg-white/10 backdrop-blur-lg border-2 border-white/20 rounded-2xl p-8">
+                <h3 class="text-2xl font-bold mb-4 flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-code-branch text-accent-300"></i>
+                    Contributors Wanted!
+                </h3>
+                <p class="text-lg text-primary-50 mb-3">
+                    <strong>Help us implement the "Drag & Drop" feature</strong>
+                </p>
+                <p class="text-primary-100">
+                    We're actively looking for contributors to enhance gesture recognition and add new features. All skill levels welcome!
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-12 px-6 lg:px-16 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-hand-pointer text-white"></i>
+                    </div>
+                    <span class="font-bold text-xl text-white">GestureMouse</span>
+                </div>
+
+                <div class="flex gap-8 text-sm font-medium">
+                    <a href="#features" class="hover:text-white transition-colors">Features</a>
+                    <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
+                    <a href="#requirements" class="hover:text-white transition-colors">Requirements</a>
+                    <a href="https://github.com/Krushnansh22/Virual-Mouse-By-Hand-Tracking-Using-Mediapipe" target="_blank" class="hover:text-white transition-colors">
+                        <i class="fa-brands fa-github mr-2"></i>GitHub
+                    </a>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-8 text-center">
+                <p class="text-sm mb-2">&copy; 2025 GestureMouse. Open Source Project.</p>
+                <p class="text-xs text-slate-500">
+                    Built with Python, MediaPipe, OpenCV & PyAutoGUI • All processing happens locally on your machine
+                </p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
