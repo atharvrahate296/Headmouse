@@ -30,9 +30,9 @@ except ImportError as e:
 class Config:
     """Configuration for virtual mouse behavior - CALIBRATED VALUES"""
     
-    # ============================================================================
+    
     # CALIBRATED THRESHOLDS - Based on your facial measurements
-    # ============================================================================
+    
     
     # Eye detection thresholds
     eye_closure_thresh: float = 0.265
@@ -44,20 +44,20 @@ class Config:
     mouth_open_thresh: float = 0.500
     mouth_consecutive_frames: int = 5
     
-    # ============================================================================
+    
     # RELATIVE NOSE MOVEMENT SETTINGS (NEW)
-    # ============================================================================
+    
     use_relative_movement: bool = True  # Toggle between relative/absolute
-    nose_dead_zone_radius: float = 0.015  # No movement within this radius (normalized)
-    nose_control_radius: float = 0.08  # Maximum detection radius (normalized)
-    nose_speed_multiplier: float = 25.0  # Cursor pixels per second per unit displacement
+    nose_dead_zone_radius: float = 0.005  # No movement within this radius (normalized)
+    nose_control_radius: float = 0.06  # Maximum detection radius (normalized)
+    nose_speed_multiplier: float = 100.0  # Cursor pixels per second per unit displacement
     nose_speed_curve: str = "exponential"  # "linear", "exponential", "squared"
-    nose_max_speed: float = 2000.0  # Maximum cursor speed (pixels per second)
+    nose_max_speed: float = 20000.0  # Maximum cursor speed (pixels per second)
     nose_center_smoothing: float = 0.3  # Smoothing for center position updates (0-1)
     
-    # ============================================================================
+    
     # Mouse control (for absolute mode)
-    # ============================================================================
+    
     cursor_smoothing: int = 5
     movement_multiplier: float = 1.8
     dead_zone: float = 0.02
