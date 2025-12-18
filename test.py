@@ -1,7 +1,7 @@
 """
-Enhanced Virtual Mouse Control System - Mouth-Controlled Movement
+Enhanced Virtual Mouse Control System - Mouth-Controlled with Relative Nose Movement
 Uses MediaPipe Face Mesh for robust face tracking with mouth-open detection
-Cursor only moves when mouth is open, other actions blocked during movement
+Cursor moves relative to nose position (velocity-based) instead of absolute positioning
 """
 
 import sys
@@ -35,17 +35,28 @@ class Config:
     # ============================================================================
     
     # Eye detection thresholds
-    eye_closure_thresh: float = 0.265  # ← UPDATED from 0.18
+    eye_closure_thresh: float = 0.265
     blink_consecutive_frames: int = 2
-    wink_ar_diff_thresh: float = 0.045  # ← UPDATED from 0.012
+    wink_ar_diff_thresh: float = 0.045
     wink_consecutive_frames: int = 6
     
     # Mouth detection thresholds
-    mouth_open_thresh: float = 0.500  # ← UPDATED from 0.035
+    mouth_open_thresh: float = 0.500
     mouth_consecutive_frames: int = 5
     
     # ============================================================================
-    # Mouse control (unchanged)
+    # RELATIVE NOSE MOVEMENT SETTINGS (NEW)
+    # ============================================================================
+    use_relative_movement: bool = True  # Toggle between relative/absolute
+    nose_dead_zone_radius: float = 0.015  # No movement within this radius (normalized)
+    nose_control_radius: float = 0.08  # Maximum detection radius (normalized)
+    nose_speed_multiplier: float = 25.0  # Cursor pixels per second per unit displacement
+    nose_speed_curve: str = "exponential"  # "linear", "exponential", "squared"
+    nose_max_speed: float = 2000.0  # Maximum cursor speed (pixels per second)
+    nose_center_smoothing: float = 0.3  # Smoothing for center position updates (0-1)
+    
+    # ============================================================================
+    # Mouse control (for absolute mode)
     # ============================================================================
     cursor_smoothing: int = 5
     movement_multiplier: float = 1.8
@@ -60,6 +71,7 @@ class Config:
     show_face_mesh: bool = True
     show_eye_markers: bool = True
     show_mouth_markers: bool = True
+    show_nose_circle: bool = True  # NEW: Show nose control circle
     show_stats: bool = True
     show_debug_values: bool = False
     
@@ -75,8 +87,6 @@ class Config:
             with open(path, 'r') as f:
                 data = json.load(f)
             
-            # Filter out fields that aren't in the Config dataclass
-            # This allows the JSON to have extra metadata fields
             import inspect
             valid_fields = {f.name for f in cls.__dataclass_fields__.values()}
             filtered_data = {k: v for k, v in data.items() if k in valid_fields}
@@ -121,6 +131,219 @@ class SmoothingFilter:
     def reset(self):
         """Clear history"""
         self.history.clear()
+
+
+class NoseRelativeController:
+    """Controls cursor movement relative to nose position (velocity-based)"""
+    
+    # Nose tip landmark
+    NOSE_TIP = 1  # Main nose tip landmark
+    NOSE_BRIDGE = 4  # Alternative: nose bridge
+    
+    def __init__(self, config: Config, screen_size: Tuple[int, int]):
+        self.config = config
+        self.screen_w, self.screen_h = screen_size
+        
+        # Reference position (center of control circle)
+        self.reference_nose_pos: Optional[Tuple[float, float]] = None
+        self.current_nose_pos: Optional[Tuple[float, float]] = None
+        
+        # Smoothing for nose position
+        self.nose_filter = SmoothingFilter(window_size=3)
+        
+        # Smoothing for reference position updates
+        self.reference_smoothing_factor = config.nose_center_smoothing
+        
+        # Last update time for velocity calculation
+        self.last_update_time = time.time()
+        
+        print(f"✓ Relative nose controller initialized")
+        print(f"  - Dead zone: {config.nose_dead_zone_radius:.3f}")
+        print(f"  - Control radius: {config.nose_control_radius:.3f}")
+        print(f"  - Speed curve: {config.nose_speed_curve}")
+        print(f"  - Max speed: {config.nose_max_speed} px/s")
+    
+    def get_nose_position(self, landmarks) -> Tuple[float, float]:
+        """Extract and smooth nose position from landmarks"""
+        nose_landmark = landmarks[self.NOSE_TIP]
+        
+        # Use normalized coordinates (0-1 range)
+        x = nose_landmark.x
+        y = nose_landmark.y
+        
+        # Apply smoothing
+        smooth_x, smooth_y = self.nose_filter.update(x, y)
+        
+        return smooth_x, smooth_y
+    
+    def update_reference_position(self, landmarks, force: bool = False):
+        """
+        Update the reference nose position (center of control circle)
+        Called when mouth is closed or on initialization
+        """
+        new_nose_pos = self.get_nose_position(landmarks)
+        
+        if self.reference_nose_pos is None or force:
+            # First time or forced update
+            self.reference_nose_pos = new_nose_pos
+        else:
+            # Smooth update to avoid jumps
+            ref_x, ref_y = self.reference_nose_pos
+            new_x, new_y = new_nose_pos
+            
+            alpha = self.reference_smoothing_factor
+            self.reference_nose_pos = (
+                alpha * new_x + (1 - alpha) * ref_x,
+                alpha * new_y + (1 - alpha) * ref_y
+            )
+    
+    def calculate_speed_multiplier(self, distance: float) -> float:
+        """
+        Calculate speed multiplier based on distance from center
+        Returns value between 0 and 1
+        """
+        # Normalize distance to 0-1 range
+        dead_zone = self.config.nose_dead_zone_radius
+        max_radius = self.config.nose_control_radius
+        
+        if distance <= dead_zone:
+            return 0.0
+        
+        # Map distance from dead_zone to max_radius -> 0 to 1
+        normalized = (distance - dead_zone) / (max_radius - dead_zone)
+        normalized = np.clip(normalized, 0.0, 1.0)
+        
+        # Apply speed curve
+        if self.config.nose_speed_curve == "linear":
+            return normalized
+        elif self.config.nose_speed_curve == "exponential":
+            return normalized ** 1.5  # Gentle exponential
+        elif self.config.nose_speed_curve == "squared":
+            return normalized ** 2
+        else:
+            return normalized
+    
+    def calculate_cursor_velocity(self, landmarks) -> Tuple[float, float]:
+        """
+        Calculate cursor velocity based on nose displacement from reference
+        Returns (vx, vy) in pixels per second
+        """
+        if self.reference_nose_pos is None:
+            self.update_reference_position(landmarks, force=True)
+            return 0.0, 0.0
+        
+        # Get current nose position
+        self.current_nose_pos = self.get_nose_position(landmarks)
+        
+        # Calculate displacement vector
+        ref_x, ref_y = self.reference_nose_pos
+        cur_x, cur_y = self.current_nose_pos
+        
+        dx = cur_x - ref_x
+        dy = cur_y - ref_y
+        
+        # Calculate distance
+        distance = np.sqrt(dx**2 + dy**2)
+        
+        # Get speed multiplier based on distance
+        speed_mult = self.calculate_speed_multiplier(distance)
+        
+        if speed_mult == 0.0:
+            return 0.0, 0.0
+        
+        # Normalize direction
+        if distance > 0:
+            direction_x = dx / distance
+            direction_y = dy / distance
+        else:
+            return 0.0, 0.0
+        
+        # Calculate base speed
+        base_speed = speed_mult * self.config.nose_speed_multiplier
+        
+        # Apply max speed limit
+        speed = min(base_speed, self.config.nose_max_speed)
+        
+        # Calculate velocity components (convert to screen pixels)
+        vx = direction_x * speed
+        vy = direction_y * speed
+        
+        return vx, vy
+    
+    def move_cursor(self, landmarks) -> bool:
+        """
+        Move cursor based on nose position
+        Returns True if cursor was moved, False otherwise
+        """
+        # Calculate velocity
+        vx, vy = self.calculate_cursor_velocity(landmarks)
+        
+        if abs(vx) < 1 and abs(vy) < 1:
+            return False
+        
+        # Calculate time delta
+        current_time = time.time()
+        dt = current_time - self.last_update_time
+        self.last_update_time = current_time
+        
+        # Clamp dt to avoid huge jumps
+        dt = min(dt, 0.1)
+        
+        # Calculate displacement
+        dx = vx * dt
+        dy = vy * dt
+        
+        # Get current cursor position
+        current_x, current_y = pag.position()
+        
+        # Calculate new position
+        new_x = current_x + dx
+        new_y = current_y + dy
+        
+        # Apply bounds
+        new_x = np.clip(new_x, 0, self.screen_w - 1)
+        new_y = np.clip(new_y, 0, self.screen_h - 1)
+        
+        # Move cursor
+        pag.moveTo(new_x, new_y, duration=0, _pause=False)
+        
+        return True
+    
+    def get_debug_info(self) -> dict:
+        """Get debug information for visualization"""
+        if self.reference_nose_pos is None or self.current_nose_pos is None:
+            return {
+                'has_reference': False,
+                'distance': 0.0,
+                'speed_mult': 0.0,
+                'velocity': (0.0, 0.0)
+            }
+        
+        ref_x, ref_y = self.reference_nose_pos
+        cur_x, cur_y = self.current_nose_pos
+        
+        dx = cur_x - ref_x
+        dy = cur_y - ref_y
+        distance = np.sqrt(dx**2 + dy**2)
+        
+        speed_mult = self.calculate_speed_multiplier(distance)
+        
+        return {
+            'has_reference': True,
+            'reference_pos': self.reference_nose_pos,
+            'current_pos': self.current_nose_pos,
+            'distance': distance,
+            'speed_mult': speed_mult,
+            'in_dead_zone': distance <= self.config.nose_dead_zone_radius,
+            'displacement': (dx, dy)
+        }
+    
+    def reset(self):
+        """Reset the controller state"""
+        self.reference_nose_pos = None
+        self.current_nose_pos = None
+        self.nose_filter.reset()
+        self.last_update_time = time.time()
 
 
 class MouthDetector:
@@ -180,8 +403,7 @@ class MouthDetector:
         # Average over recent history
         if len(self.mouth_ratio_history) > 1:
             mar = np.mean(self.mouth_ratio_history)
-        # print(f"MAR: {mar:.4f}")
-        # print(f"Threshold: {self.config.mouth_open_thresh:.4f}")
+        
         # State machine for mouth detection
         if mar > self.config.mouth_open_thresh: 
             self.mouth_open_counter += 1
@@ -426,7 +648,7 @@ class EnhancedGestureDetector:
 
 
 class VirtualMouse:
-    """Main virtual mouse controller - Mouth-controlled cursor movement"""
+    """Main virtual mouse controller - Mouth-controlled with relative nose movement"""
     
     IRIS_LEFT = [474, 475, 476, 477]
     IRIS_RIGHT = [469, 470, 471, 472]
@@ -444,12 +666,19 @@ class VirtualMouse:
         # Initialize components
         self.gesture_detector = EnhancedGestureDetector(self.config)
         self.mouth_detector = MouthDetector(self.config)
-        self.cursor_filter = SmoothingFilter(self.config.cursor_smoothing)
+        
+        # Initialize movement controller based on mode
+        if self.config.use_relative_movement:
+            self.nose_controller = NoseRelativeController(self.config, (self.screen_w, self.screen_h))
+            print("✓ Using RELATIVE nose movement (velocity-based)")
+        else:
+            self.cursor_filter = SmoothingFilter(self.config.cursor_smoothing)
+            print("✓ Using ABSOLUTE iris movement (position-based)")
         
         # State variables
         self.scroll_mode = False
-        self.is_moving = False  # Track if cursor is currently moving
-        self.last_cursor_pos = None  # Store last cursor position when mouth closes
+        self.is_moving = False
+        self.last_cursor_pos = None
         self.fps = 0
         self.frame_count = 0
         self.fps_start_time = time.time()
@@ -461,11 +690,10 @@ class VirtualMouse:
         
         print("✓ Mouth-Controlled Virtual Mouse initialized")
         print(f"✓ Screen resolution: {self.screen_w}x{self.screen_h}")
-        print(f"✓ Mouth-open detection: ENABLED")
-        print(f"✓ Multi-landmark tracking: ACTIVE")
+        print(f"✓ Movement mode: {'RELATIVE (nose)' if self.config.use_relative_movement else 'ABSOLUTE (iris)'}")
     
-    def calculate_cursor_position(self, landmarks, frame_shape) -> Tuple[float, float]:
-        """Calculate cursor position from iris landmarks"""
+    def calculate_cursor_position_absolute(self, landmarks, frame_shape) -> Tuple[float, float]:
+        """Calculate cursor position from iris landmarks (ABSOLUTE MODE)"""
         # Use left iris center (landmark 475)
         iris_landmark = landmarks[475]
         
@@ -484,8 +712,69 @@ class VirtualMouse:
         
         return smooth_x, smooth_y
     
+    def draw_nose_control_circle(self, frame, nose_debug: dict):
+        """Draw the nose control circle and current position"""
+        if not nose_debug['has_reference']:
+            return
+        
+        h, w = frame.shape[:2]
+        
+        # Get positions in pixel coordinates
+        ref_x, ref_y = nose_debug['reference_pos']
+        ref_px = int(ref_x * w)
+        ref_py = int(ref_y * h)
+        
+        cur_x, cur_y = nose_debug['current_pos']
+        cur_px = int(cur_x * w)
+        cur_py = int(cur_y * h)
+        
+        # Draw dead zone circle (inner - no movement)
+        dead_zone_radius = int(self.config.nose_dead_zone_radius * w)
+        cv2.circle(frame, (ref_px, ref_py), dead_zone_radius, (100, 100, 100), 1)
+        
+        # Draw control circle (outer - maximum detection)
+        control_radius = int(self.config.nose_control_radius * w)
+        color = (0, 255, 255) if self.is_moving else (100, 100, 100)
+        cv2.circle(frame, (ref_px, ref_py), control_radius, color, 2)
+        
+        # Draw center point
+        cv2.circle(frame, (ref_px, ref_py), 4, (0, 255, 0), -1)
+        
+        # Draw current nose position
+        nose_color = (0, 255, 255) if not nose_debug['in_dead_zone'] else (100, 100, 100)
+        cv2.circle(frame, (cur_px, cur_py), 6, nose_color, -1)
+        
+        # Draw displacement vector
+        if not nose_debug['in_dead_zone']:
+            cv2.arrowedLine(frame, (ref_px, ref_py), (cur_px, cur_py), 
+                          (0, 255, 255), 2, tipLength=0.3)
+        
+        # Draw speed indicator (bar on the side)
+        speed_mult = nose_debug['speed_mult']
+        bar_height = 100
+        bar_width = 20
+        bar_x = w - 40
+        bar_y = 50
+        
+        # Background bar
+        cv2.rectangle(frame, (bar_x, bar_y), 
+                     (bar_x + bar_width, bar_y + bar_height), 
+                     (50, 50, 50), -1)
+        
+        # Speed fill
+        fill_height = int(bar_height * speed_mult)
+        if fill_height > 0:
+            cv2.rectangle(frame, (bar_x, bar_y + bar_height - fill_height), 
+                         (bar_x + bar_width, bar_y + bar_height), 
+                         (0, 255, 255), -1)
+        
+        # Speed percentage text
+        cv2.putText(frame, f"{int(speed_mult * 100)}%", 
+                   (bar_x - 30, bar_y + bar_height + 20),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+    
     def draw_visualizations(self, frame, face_landmarks, eye_debug_values: dict, 
-                           mouth_debug_values: dict):
+                           mouth_debug_values: dict, nose_debug: Optional[dict] = None):
         """Draw visual feedback on frame"""
         h, w = frame.shape[:2]
         
@@ -516,8 +805,18 @@ class VirtualMouse:
                 color = (0, 255, 255) if self.is_moving else (255, 0, 0)
                 cv2.circle(frame, (x, y), 2, color, -1)
         
+        # Draw nose control circle (if in relative mode)
+        if self.config.use_relative_movement and self.config.show_nose_circle and nose_debug:
+            self.draw_nose_control_circle(frame, nose_debug)
+        
         if self.config.show_stats:
             y_offset = 30
+            
+            # Movement mode indicator
+            mode_text = "RELATIVE" if self.config.use_relative_movement else "ABSOLUTE"
+            cv2.putText(frame, f"MODE: {mode_text}", (10, y_offset),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+            y_offset += 25
             
             # Movement status indicator
             if self.is_moving:
@@ -545,6 +844,13 @@ class VirtualMouse:
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             y_offset += 25
             
+            # Nose debug info (if relative mode)
+            if self.config.use_relative_movement and nose_debug and nose_debug['has_reference']:
+                cv2.putText(frame, f"Distance: {nose_debug['distance']:.4f}", 
+                           (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 
+                           (0, 255, 255), 1)
+                y_offset += 20
+            
             # Debug values for calibration
             if self.config.show_debug_values:
                 # Eye debug
@@ -564,12 +870,20 @@ class VirtualMouse:
                 y_offset += 25
         
         # Instructions
-        instructions = [
-            "ESC: Exit | D: Debug | M: Mesh | S: Stats",
-            "OPEN MOUTH: Move cursor (blocks clicks)",
-            "CLOSE MOUTH: Lock cursor at position",
-            "Blink both: Toggle scroll | Wink: Click (when mouth closed)"
-        ]
+        if self.config.use_relative_movement:
+            instructions = [
+                "ESC: Exit | D: Debug | M: Mesh | N: Circle | R: Toggle Mode",
+                "OPEN MOUTH: Move nose to control cursor (velocity)",
+                "CLOSE MOUTH: Lock cursor & recalibrate center",
+                "Blink both: Toggle scroll | Wink: Click (when mouth closed)"
+            ]
+        else:
+            instructions = [
+                "ESC: Exit | D: Debug | M: Mesh | R: Toggle Mode",
+                "OPEN MOUTH: Move cursor (blocks clicks)",
+                "CLOSE MOUTH: Lock cursor at position",
+                "Blink both: Toggle scroll | Wink: Click (when mouth closed)"
+            ]
         
         y_pos = h - 80
         for instruction in instructions:
@@ -590,17 +904,28 @@ class VirtualMouse:
         print("\n" + "="*70)
         print("MOUTH-CONTROLLED VIRTUAL MOUSE")
         print("="*70)
-        print("👄 OPEN MOUTH:          Move cursor (clicks blocked)")
-        print("👄 CLOSE MOUTH:         Lock cursor at current position")
+        if self.config.use_relative_movement:
+            print("🎯 MODE: RELATIVE (Nose velocity-based)")
+            print("👄 OPEN MOUTH:          Move nose relative to center")
+            print("   - Small movements:   Slow cursor movement")
+            print("   - Large movements:   Fast cursor movement")
+            print("👄 CLOSE MOUTH:         Lock cursor & recalibrate center")
+        else:
+            print("🎯 MODE: ABSOLUTE (Iris position-based)")
+            print("👄 OPEN MOUTH:          Move cursor (clicks blocked)")
+            print("👄 CLOSE MOUTH:         Lock cursor at current position")
         print("👁️  Blink both eyes:     Toggle scroll mode (when mouth closed)")
         print("😉 Wink left/right:     Click (when mouth closed)")
         print()
         print("⌨️  Keyboard shortcuts:")
         print("   ESC - Exit program")
+        print("   R   - Toggle between Relative/Absolute mode")
         print("   D   - Toggle debug values")
         print("   M   - Toggle face mesh")
+        print("   N   - Toggle nose circle (relative mode)")
         print("   S   - Toggle statistics")
         print("   +/- - Adjust mouth sensitivity")
+        print("   [/] - Adjust nose speed (relative mode)")
         print("   C   - Save configuration")
         print("="*70 + "\n")
         
@@ -625,6 +950,8 @@ class VirtualMouse:
                     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     results = face_mesh.process(rgb_frame)
                     
+                    nose_debug = None
+                    
                     # Process face landmarks
                     if results.multi_face_landmarks:
                         face_landmarks = results.multi_face_landmarks[0]
@@ -641,22 +968,41 @@ class VirtualMouse:
                         was_moving = self.is_moving
                         self.is_moving = mouth_is_open
                         
-                        # CURSOR MOVEMENT - Only when mouth is open
-                        if self.is_moving:
-                            # Move cursor
-                            cursor_x, cursor_y = self.calculate_cursor_position(
-                                landmarks, frame.shape)
-                            pag.moveTo(cursor_x, cursor_y, duration=0, _pause=False)
-                            self.last_cursor_pos = (cursor_x, cursor_y)
+                        # CURSOR MOVEMENT
+                        if self.config.use_relative_movement:
+                            # === RELATIVE MODE (Nose-based velocity) ===
+                            if self.is_moving:
+                                # Move cursor based on nose displacement
+                                moved = self.nose_controller.move_cursor(landmarks)
+                                
+                                if not was_moving:
+                                    print("🖱️  Relative movement: ACTIVE")
+                            else:
+                                # Mouth closed - update reference position
+                                self.nose_controller.update_reference_position(landmarks)
+                                
+                                if was_moving:
+                                    print("🔒 Cursor locked, center recalibrated")
                             
-                            # Clear smoothing filter when starting movement
-                            if not was_moving:
-                                self.cursor_filter.reset()
-                                print("🖱️  Cursor movement: ACTIVE")
+                            # Get debug info for visualization
+                            nose_debug = self.nose_controller.get_debug_info()
+                        
                         else:
-                            # Mouth closed - cursor stays at last position
-                            if was_moving:
-                                print("🔒 Cursor locked at position")
+                            # === ABSOLUTE MODE (Iris-based position) ===
+                            if self.is_moving:
+                                # Move cursor to iris position
+                                cursor_x, cursor_y = self.calculate_cursor_position_absolute(
+                                    landmarks, frame.shape)
+                                pag.moveTo(cursor_x, cursor_y, duration=0, _pause=False)
+                                self.last_cursor_pos = (cursor_x, cursor_y)
+                                
+                                if not was_moving:
+                                    self.cursor_filter.reset()
+                                    print("🖱️  Cursor movement: ACTIVE")
+                            else:
+                                # Mouth closed - cursor stays at last position
+                                if was_moving:
+                                    print("🔒 Cursor locked at position")
                         
                         # GESTURE DETECTION - Only when NOT moving (mouth closed)
                         if not self.is_moving:
@@ -664,18 +1010,18 @@ class VirtualMouse:
                             if self.gesture_detector.detect_blink(landmarks):
                                 self.scroll_mode = not self.scroll_mode
                                 print(f"{'✓' if self.scroll_mode else '✗'} Scroll mode: "
-                                      f"{'ON' if self.scroll_mode else 'OFF'}",f"L: {eye_debug_values['left_closure']:.3f},  R: {eye_debug_values['right_closure']:.3f}")
+                                      f"{'ON' if self.scroll_mode else 'OFF'}")
                             
                             # 2. Wink - click
                             wink = self.gesture_detector.detect_wink(landmarks)
                             if wink:
                                 button = 'left' if wink == 'left' else 'right'
                                 pag.click(button=button)
-                                print(f"🖱️  {button.capitalize()} click", f"L: {eye_debug_values['left_closure']:.3f},  R: {eye_debug_values['right_closure']:.3f}")
+                                print(f"🖱️  {button.capitalize()} click")
                         
                         # Draw visualizations
                         self.draw_visualizations(frame, face_landmarks, 
-                                               eye_debug_values, mouth_debug_values)
+                                               eye_debug_values, mouth_debug_values, nose_debug)
                     else:
                         # No face detected
                         cv2.putText(frame, "NO FACE DETECTED", (10, 30),
@@ -700,12 +1046,35 @@ class VirtualMouse:
                     if key == 27:  # ESC
                         print("\n👋 Exiting...")
                         break
+                    elif key == ord('r') or key == ord('R'):
+                        # Toggle between relative and absolute mode
+                        self.config.use_relative_movement = not self.config.use_relative_movement
+                        
+                        if self.config.use_relative_movement:
+                            # Switch to relative mode
+                            if not hasattr(self, 'nose_controller'):
+                                self.nose_controller = NoseRelativeController(
+                                    self.config, (self.screen_w, self.screen_h))
+                            else:
+                                self.nose_controller.reset()
+                            print("✓ Switched to RELATIVE mode (nose velocity)")
+                        else:
+                            # Switch to absolute mode
+                            if not hasattr(self, 'cursor_filter'):
+                                self.cursor_filter = SmoothingFilter(self.config.cursor_smoothing)
+                            else:
+                                self.cursor_filter.reset()
+                            print("✓ Switched to ABSOLUTE mode (iris position)")
+                    
                     elif key == ord('d') or key == ord('D'):
                         self.config.show_debug_values = not self.config.show_debug_values
                         print(f"Debug values: {'ON' if self.config.show_debug_values else 'OFF'}")
                     elif key == ord('m') or key == ord('M'):
                         self.config.show_face_mesh = not self.config.show_face_mesh
                         print(f"Face mesh: {'ON' if self.config.show_face_mesh else 'OFF'}")
+                    elif key == ord('n') or key == ord('N'):
+                        self.config.show_nose_circle = not self.config.show_nose_circle
+                        print(f"Nose circle: {'ON' if self.config.show_nose_circle else 'OFF'}")
                     elif key == ord('s') or key == ord('S'):
                         self.config.show_stats = not self.config.show_stats
                         print(f"Statistics: {'ON' if self.config.show_stats else 'OFF'}")
@@ -717,6 +1086,16 @@ class VirtualMouse:
                         self.config.mouth_open_thresh += 0.005
                         self.config.mouth_open_thresh = min(0.10, self.config.mouth_open_thresh)
                         print(f"Mouth sensitivity decreased: {self.config.mouth_open_thresh:.3f}")
+                    elif key == ord('['):
+                        if self.config.use_relative_movement:
+                            self.config.nose_speed_multiplier -= 2.0
+                            self.config.nose_speed_multiplier = max(5.0, self.config.nose_speed_multiplier)
+                            print(f"Nose speed decreased: {self.config.nose_speed_multiplier:.1f}")
+                    elif key == ord(']'):
+                        if self.config.use_relative_movement:
+                            self.config.nose_speed_multiplier += 2.0
+                            self.config.nose_speed_multiplier = min(50.0, self.config.nose_speed_multiplier)
+                            print(f"Nose speed increased: {self.config.nose_speed_multiplier:.1f}")
                     elif key == ord('c') or key == ord('C'):
                         self.config.save()
                         print("✓ Configuration saved to mouse_config.json")
@@ -739,8 +1118,9 @@ def main():
     """Entry point"""
     print("\n" + "="*70)
     print("MOUTH-CONTROLLED VIRTUAL MOUSE")
+    print("Enhanced with Relative Nose Movement")
     print("="*70)
-    print("Initializing mouth detection system...")
+    print("Initializing detection systems...")
     
     try:
         mouse = VirtualMouse()
