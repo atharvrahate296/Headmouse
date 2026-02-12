@@ -1,0 +1,14 @@
+__pycache__
+/__pycache__
+env
+.env
+/env
+.vscode
+/.vscode
+.idea
+/.idea
+./dist
+/dist
+/build
+./build
+Virtual-Mouse.spec
