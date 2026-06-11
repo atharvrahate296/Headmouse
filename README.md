@@ -90,7 +90,7 @@ Virtual-Mouse/
 
 To install complex C packages (like dlib) easily, we use Miniconda.
 
-- Download Miniconda from this Drive link:  [MiniConda](https://drive.google.com/file/d/1kT2CeuDSm7HL4M9swc4pMuRHg-AyMGU9/view?usp=drive_link) 
+- Download Miniconda from this Drive link:  [MiniConda]([https://drive.google.com/file/d/1kT2CeuDSm7HL4M9swc4pMuRHg-AyMGU9/view?usp=drive_link](https://drive.google.com/drive/folders/16vmWMv_jmJE0ddzHCuMxrLdpCELP6y2M?usp=sharing)) 
 
 - Open the .exe file you just downloaded.
 
